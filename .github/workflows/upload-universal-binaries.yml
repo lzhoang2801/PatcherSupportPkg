@@ -1,0 +1,66 @@
+name: Download & Upload Universal-Binaries.dmg
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release'
+        required: true
+        default: '1.9.6'
+      artifact_url:
+        description: 'Direct URL to the ZIP artifact'
+        required: true
+        default: 'https://nightly.link/lzhoang2801/PatcherSupportPkg/workflows/build/patches-nov-2025/Universal%20Binaries.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  download-extract-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact ZIP
+        run: |
+          echo "Downloading ${{ github.event.inputs.artifact_url }}"
+          curl -L --fail --retry 3 -o artifact.zip "${{ github.event.inputs.artifact_url }}"
+
+      - name: List ZIP contents (debug)
+        run: unzip -l artifact.zip || (echo "failed to list zip" && exit 1)
+
+      - name: Extract ZIP
+        run: unzip -o artifact.zip -d extracted || (echo "failed to extract zip" && exit 1)
+
+      - name: Locate Universal-Binaries.dmg
+        id: find_dmg
+        run: |
+          set -e
+          file=$(find extracted -type f -iname "Universal-Binaries*.dmg" | head -n 1 || true)
+          if [ -z "$file" ]; then
+            echo "No DMG found in extracted files. Listing extracted tree for debugging:"
+            ls -R extracted
+            echo "::error::Universal-Binaries.dmg not found inside archive"
+            exit 1
+          fi
+          echo "Found DMG: $file"
+          echo "dmg_path=$file" >> $GITHUB_OUTPUT
+
+      - name: Create (or get) release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          release_name: ${{ github.event.inputs.release_tag }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find_dmg.outputs.dmg_path }}
+          asset_name: Universal-Binaries.dmg
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
