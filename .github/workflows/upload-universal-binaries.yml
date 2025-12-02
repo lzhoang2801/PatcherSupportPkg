@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release'
+        description: 'Release 1.9.6'
         required: true
         default: '1.9.6'
       artifact_url:
