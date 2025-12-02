@@ -15,8 +15,7 @@ jobs:
     name: Zip and Upload Binaries
     runs-on: macos-14
     steps:
-      - name: Clean, strip, and sign binaries
-        run: python3 ci.py
+      - uses: actions/checkout@v3
       - name: Tag folder
         run: touch Universal-Binaries/.signed
       - name: Build DMG
